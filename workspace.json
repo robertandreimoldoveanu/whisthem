@@ -1,6 +1,8 @@
 {
   "version": 2,
   "projects": {
-    "api": "apps/api"
+    "api": "apps/api",
+    "webclient": "apps/webclient",
+    "webclient-e2e": "apps/webclient-e2e"
   }
 }

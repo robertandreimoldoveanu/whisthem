@@ -1,0 +1,26 @@
+{
+  "root": "libs/debug",
+  "sourceRoot": "libs/debug/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/node:package",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/debug",
+        "tsConfig": "libs/debug/tsconfig.lib.json",
+        "packageJson": "libs/debug/package.json",
+        "main": "libs/debug/src/index.ts",
+        "assets": ["libs/debug/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/debug/**/*.ts"]
+      }
+    }
+  },
+  "tags": []
+}

@@ -24,16 +24,15 @@ export class SearchController {
   private _value = '';
   private _search$ = new Subject<string>();
 
+  queryStream$ = this._search$.pipe(
+    map((q) => q.trim()),
+    debounceTime(1000),
+    distinctUntilChanged(),
+    map((query) => (query.length > 0 ? query : undefined))
+  );
+
   constructor() {
     makeAutoObservable(this);
-    this._search$
-      .pipe(
-        map((q) => q.trim()),
-        debounceTime(1000),
-        distinctUntilChanged(),
-        map((query) => (query.length > 0 ? query : undefined))
-      )
-      .subscribe((v) => this.setQuery(v));
   }
 
   setValue(value: string) {

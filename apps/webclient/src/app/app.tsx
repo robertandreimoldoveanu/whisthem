@@ -1,84 +1,111 @@
-import styled from '@emotion/styled';
-import { Button, TextField } from '@mui/material';
-import axios from 'axios';
-import { observer } from 'mobx-react-lite';
+import { Box, styled } from '@mui/material';
+import {
+  CharacterMatch,
+  CharacterMatchResponse,
+  PersonCreditResponse,
+  SearchFormState,
+} from '@roanm/models';
+import axios, { AxiosRequestConfig } from 'axios';
 import { useCallback, useEffect, useState } from 'react';
-import { SearchController } from './search-controller';
-import { useStreamEffect } from './use-stream';
+import { defer, filter, map, Observable, Subscription, tap } from 'rxjs';
+import { SearchForm } from './search-form';
 
-const StyledApp = styled.div`
-  // Your style here
-  color: blue;
-`;
-
-const TextSearch = observer(() => {
-  const [searchController] = useState(() => new SearchController());
-
-  const handleChange = useCallback(
-    (event) => {
-      searchController.setValue(event.target.value);
-    },
-    [searchController]
-  );
-
-  useEffect(() => {
-    if (searchController.query) {
-      console.log('we should search for ' + searchController.query);
-    }
-  }, [searchController.query]);
-
-  // useEffect(() => {
-  //   const a = searchController.intervalStream$.subscribe((v) =>
-  //     console.log('hello', v)
-  //   );
-  //   return () => {
-  //     a.unsubscribe();
-  //   };
-  // }, [searchController]);
-
-  const [query] = useStreamEffect(searchController.intervalStream$, (v) =>
-    console.log('useStreamEffect', v, 'and', searchController.value)
-  );
-
-  return (
-    <>
-      <h1>Hello world!</h1>
-      <TextField
-        variant="standard"
-        value={searchController.value}
-        onChange={handleChange}
-      />
-      <br />
-      <br />
-      <br />
-      <span>{searchController.value}</span>
-      <p>Here is: {query}</p>
-    </>
-  );
-});
+const StyledApp = styled(Box)(() => ({
+  width: '400px',
+  margin: '0 auto',
+  padding: '16px',
+}));
 
 const URL = 'http://localhost:3333/api';
 
 const App = () => {
-  const [show, setShow] = useState(false);
-  const buttonClicked = useCallback(() => {
-    console.log("i've been clicked");
-    setShow(!show);
-    axios
-      .get(URL)
-      .then((response) => setData(JSON.stringify(response.data, null, 4)));
-  }, [show]);
+  const [searchValue, setSearchValue] = useState({} as SearchFormState);
+  const [matches, setMatches] = useState([] as CharacterMatch[]);
+  const [otherWorks, setOtherWorks] = useState<PersonCreditResponse[]>([]);
+  const [actorId, setActorId] = useState<number | null>(null);
 
-  const [data, setData] = useState('');
+  useEffect(() => {
+    if (searchValue.character && searchValue.title) {
+      setMatches([]);
+      setActorId(null);
+      const a = http
+        .get$<CharacterMatchResponse>(
+          `${URL}/searchCharacters/${getQueryForState(searchValue)}`
+        )
+        .pipe(
+          tap((data) => data.matches.length !== 1 && setMatches(data.matches)),
+          filter((data) => data.matches.length === 1),
+          tap((data) => setActorId(data.matches[0].id))
+        )
+        .subscribe();
+
+      return () => a.unsubscribe();
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    return () => {};
+  }, [searchValue]);
+
+  const onMatchClicked = useCallback(
+    (id) => {
+      setActorId(id);
+      setMatches([]);
+    },
+    [setActorId]
+  );
+
+  useEffect(() => {
+    let sink$ = new Subscription();
+    if (actorId) {
+      sink$ = http
+        .get$<PersonCreditResponse[]>(`${URL}/otherWorks?actorId=${actorId}`)
+        .pipe(tap((data) => setOtherWorks(data)))
+        .subscribe();
+    }
+
+    return () => sink$.unsubscribe();
+  }, [actorId]);
 
   return (
     <StyledApp>
-      {show && <TextSearch />}
-      <br />
-      <Button onClick={buttonClicked}>Click</Button>
-      {data && <pre>{data}</pre>}
+      <SearchForm searchValueChange={setSearchValue} />
+      {matches.length > 0 && (
+        <ul>
+          {matches.map((m) => (
+            <li onClick={() => onMatchClicked(m.id)} key={m.id}>
+              {m.character} ({m.name})
+            </li>
+          ))}
+        </ul>
+      )}
+      {otherWorks.length > 0 && (
+        <ul>
+          {otherWorks.map((m) => (
+            <li key={m.id + (m.name || m.title || '')}>
+              {m.name || m.title} ({m.name || m.title})
+              <a href={m.poster_path || ''}>poster</a>
+            </li>
+          ))}
+        </ul>
+      )}
     </StyledApp>
   );
 };
 
 export default App;
+
+function getQueryForState<T>(state: T) {
+  const queryElements = [];
+  for (const prop in state) {
+    queryElements.push(`${prop}=${encodeURIComponent(String(state[prop]))}`);
+  }
+  return queryElements.length ? `?${queryElements.join('&')}` : '';
+}
+
+class HttpService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get$<T>(url: string, extras?: AxiosRequestConfig<any>): Observable<T> {
+    return defer(() => axios.get<T>(url, extras)).pipe(map((r) => r.data));
+  }
+}
+
+export const http = new HttpService();

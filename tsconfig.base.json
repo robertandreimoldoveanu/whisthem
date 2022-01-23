@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@roanm/debug": ["libs/debug/src/index.ts"]
+      "@roanm/debug": ["libs/debug/src/index.ts"],
+      "@roanm/models": ["libs/models/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

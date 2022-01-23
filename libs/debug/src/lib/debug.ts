@@ -1,8 +1,6 @@
 /* eslint-disable no-debugger */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { tap } from 'rxjs';
-
 export const DPN = (function dpn() {
   const flows = new Map();
   let debugOn = true;
@@ -38,32 +36,6 @@ export const DPN = (function dpn() {
         }
         debugger;
       }
-    },
-    checkpoint: function (
-      name: string | number,
-      variables: { [x: string]: any },
-      logs = false
-    ) {
-      if (flows.get(name) && debugOn) {
-        Object.keys(variables).forEach((variable) => {
-          log(variable, variables[variable]);
-        });
-        return tap({
-          next(value) {
-            logs && log(`[${name} STREAM NEXT]`, value);
-            debugger;
-          },
-          error(error) {
-            logs && log(`[${name} STREAM ERROR]`, error);
-            debugger;
-          },
-          complete() {
-            logs && log(`[${name} STREAM COMPLETE]`);
-            debugger;
-          },
-        });
-      }
-      return null;
     },
   };
 })();

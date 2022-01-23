@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Observable } from 'rxjs';
+import { useCallback, useEffect, useState } from 'react';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 export const useStreamValue = <T,>(stream$: Observable<T>) => {
   const [value, setValue] = useState<T | null>(null);
@@ -35,4 +35,23 @@ export const useStreamEffect = <T, K>(
   }, [stream$]);
 
   return [value];
+};
+
+export const useSubject$ = <T,>(
+  initialValue?: any
+): [Subject<any>, (value: any) => void] => {
+  const [subject$] = useState<Subject<T> | BehaviorSubject<T>>(
+    initialValue !== undefined
+      ? new BehaviorSubject(initialValue)
+      : new Subject()
+  );
+
+  const next = useCallback(
+    (value) => {
+      subject$.next(value);
+    },
+    [subject$]
+  );
+
+  return [subject$, next];
 };

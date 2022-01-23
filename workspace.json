@@ -3,6 +3,7 @@
   "projects": {
     "api": "apps/api",
     "debug": "libs/debug",
+    "models": "libs/models",
     "webclient": "apps/webclient",
     "webclient-e2e": "apps/webclient-e2e"
   }

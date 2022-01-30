@@ -1,4 +1,21 @@
 import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react';
+
+import isEqual from 'lodash.isequal';
+import { observer } from 'mobx-react-lite';
+import {
+  BehaviorSubject,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  skip,
+} from 'rxjs';
+
+import {
   Box,
   FormControl,
   FormControlLabel,
@@ -17,16 +34,6 @@ import {
   SearchFormProps,
   SearchFormState,
 } from '@roanm/models';
-import isEqual from 'lodash.isequal';
-import { observer } from 'mobx-react-lite';
-import { useCallback, useEffect, useReducer, useState } from 'react';
-import {
-  BehaviorSubject,
-  debounceTime,
-  distinctUntilChanged,
-  filter,
-  skip,
-} from 'rxjs';
 
 const StyledSearchForm = styled(Paper)(() => ({
   width: '400px',
@@ -38,8 +45,8 @@ const defaults: Record<SearchFormFields, string> = {
   type: 'tv',
   season: '1',
   episode: '1',
-  title: 'the office',
-  character: 'jim halpert',
+  title: '',
+  character: '',
 };
 
 function reducer(

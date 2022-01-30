@@ -1,14 +1,33 @@
-import { Box, styled } from '@mui/material';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import axios, { AxiosRequestConfig } from 'axios';
+import {
+  defer,
+  filter,
+  map,
+  Observable,
+  Subscription,
+  tap,
+} from 'rxjs';
+
+import {
+  Box,
+  styled,
+} from '@mui/material';
 import {
   CharacterMatch,
   CharacterMatchResponse,
   PersonCreditResponse,
   SearchFormState,
 } from '@roanm/models';
-import axios, { AxiosRequestConfig } from 'axios';
-import { useCallback, useEffect, useState } from 'react';
-import { defer, filter, map, Observable, Subscription, tap } from 'rxjs';
+
+import { CharacterCard } from './character-card';
 import { SearchForm } from './search-form';
+import { VisualWorksCard } from './visual-work-card';
 
 const StyledApp = styled(Box)(() => ({
   width: '400px',
@@ -23,6 +42,7 @@ const App = () => {
   const [matches, setMatches] = useState([] as CharacterMatch[]);
   const [otherWorks, setOtherWorks] = useState<PersonCreditResponse[]>([]);
   const [actorId, setActorId] = useState<number | null>(null);
+  const [actorData, setActorData] = useState<CharacterMatch | null>(null);
 
   useEffect(() => {
     if (searchValue.character && searchValue.title) {
@@ -34,8 +54,8 @@ const App = () => {
         )
         .pipe(
           tap((data) => data.matches.length !== 1 && setMatches(data.matches)),
-          filter((data) => data.matches.length === 1),
-          tap((data) => setActorId(data.matches[0].id))
+          filter((data) => data.matches.length === 1 ),
+          tap((data) => (setActorId(data.matches[0].id), setActorData(data.matches[0])))
         )
         .subscribe();
 
@@ -67,25 +87,26 @@ const App = () => {
 
   return (
     <StyledApp>
+      <h3>Made possible by <a href="https://www.themoviedb.org/">TMDB</a></h3>
       <SearchForm searchValueChange={setSearchValue} />
+      {actorData && <CharacterCard {...actorData} />}
       {matches.length > 0 && (
-        <ul>
+        <div>
           {matches.map((m) => (
-            <li onClick={() => onMatchClicked(m.id)} key={m.id}>
-              {m.character} ({m.name})
-            </li>
+            <CharacterCard
+              {...m}
+              onClick={() => onMatchClicked(m.id)}
+              key={m.id}
+            />
           ))}
-        </ul>
+        </div>
       )}
       {otherWorks.length > 0 && (
-        <ul>
-          {otherWorks.map((m) => (
-            <li key={m.id + (m.name || m.title || '')}>
-              {m.name || m.title} ({m.name || m.title})
-              <a href={m.poster_path || ''}>poster</a>
-            </li>
+        <div>
+          {otherWorks.map((m, idx) => (
+            <VisualWorksCard key={idx + '-' + m.id + (m.name || m.title || '')} {...m} actor={actorData?.name || ''} />
           ))}
-        </ul>
+        </div>
       )}
     </StyledApp>
   );

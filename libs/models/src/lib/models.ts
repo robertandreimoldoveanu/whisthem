@@ -29,6 +29,7 @@ export interface VisualWorkApiResponse {
   vote_average: number;
   overview: string;
   vote_count: number;
+  genre_ids: number[];
 }
 
 export interface TvApiResponse extends VisualWorkApiResponse {

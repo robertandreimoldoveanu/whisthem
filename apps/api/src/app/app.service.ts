@@ -1,3 +1,12 @@
+import { AxiosResponse } from 'axios';
+import {
+  catchError,
+  map,
+  Observable,
+  of,
+  switchMap,
+} from 'rxjs';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
@@ -7,11 +16,10 @@ import {
   CreditsApiResponse,
   MovieApiResponse,
   PersonCombinedCreditsResponse,
+  PersonCreditResponse,
   SearchApiResponse,
   TvApiResponse,
 } from '@roanm/models';
-import { AxiosResponse } from 'axios';
-import { catchError, map, Observable, of, switchMap } from 'rxjs';
 
 @Injectable()
 export class AppService {
@@ -33,19 +41,10 @@ export class AppService {
         `${tmdbBaseUrl}/search/${type}?query=${encodeURIComponent(title)}`
       )
       .pipe(
-        map(
-          (response) =>
-            response.data.results.sort((a, b) => b.popularity - a.popularity)[0]
-              .id
-        ),
+        map((response) => this.getMostPopularWork(response).id),
         switchMap((id) => this.getCreditsReq(type, id, season, episode)),
         map(this.creditsResponseToCharacters),
-        map((characters) => {
-          const matches = characters.filter((c) =>
-            c.character.toLowerCase().includes(character.toLowerCase())
-          );
-          return { matches };
-        }),
+        map((characters) => this.filterCharacterMatches(characters, character)),
         catchError((e) => {
           console.log('error', e);
           return of(null);
@@ -61,14 +60,28 @@ export class AppService {
       .pipe(
         map((r) => r.data),
         map((data) =>
-          data.cast.map((c) => ({
+          this.parseOtherWorks(data.cast).map((c) => ({
             ...c,
             poster_path: c.poster_path
               ? `${photoBase}${c.poster_path}`
               : undefined,
+            backdrop_path: c.backdrop_path
+              ? `${photoBase}${c.backdrop_path}`
+              : undefined,
           }))
         )
       );
+  }
+
+  private getMostPopularWork(response) {
+    return response.data.results.sort((a, b) => b.popularity - a.popularity)[0];
+  }
+
+  private filterCharacterMatches(characters: CharacterMatch[], search: string) {
+    const matches = characters.filter((c) =>
+      c.character.toLowerCase().includes(search.toLowerCase())
+    );
+    return { matches };
   }
 
   private getCreditsReq(
@@ -86,6 +99,14 @@ export class AppService {
     }
   }
 
+
+  /**
+   * Map an API response for credits from a show or movie
+   * to character/actor matches
+   * 
+   * @param creditsResponse 
+   * @returns charater matches
+   */
   private creditsResponseToCharacters(
     creditsResponse: AxiosResponse<CreditsApiResponse>
   ): CharacterMatch[] {
@@ -99,6 +120,23 @@ export class AppService {
       popularity: credit.popularity,
       id: credit.id,
     }));
+  }
+
+  /**
+   * Filters out talk shows and credits with missing data,
+   * then sorts data by popularity.
+   * @param works
+   * @returns parsed works
+   */
+  private parseOtherWorks(works: PersonCreditResponse[]) {
+    return works
+      .filter(
+        (a) =>
+          a.character &&
+          !a.genre_ids.includes(10763) &&
+          !a.genre_ids.includes(10767)
+      )
+      .sort((a, b) => b.popularity - a.popularity);
   }
 }
 
